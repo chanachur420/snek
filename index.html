@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <title>Snek</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            background-color: #ff4d4d;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1 {
+            color: #fff;
+        }
+
+        #game-board {
+            display: grid;
+            grid-template-columns: repeat(20, 5vw);
+            margin: auto;
+            margin-top: 5vh;
+            border: 5px solid #333;
+            background-color: #ff6666;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .cell {
+            width: 5vw;
+            height: 5vw;
+            border: 1px solid #ccc;
+        }
+
+        #snake-head {
+            background-color: #4CAF50;
+            border-radius: 50%;
+        }
+
+        .snake-body {
+            background-color: #45a049;
+            border-radius: 50%;
+        }
+
+        #food {
+            background-color: #e74c3c;
+            border-radius: 50%;
+        }
+
+        #power-up {
+            background-color: #3498db;
+            border-radius: 50%;
+            border: 2px solid #2980b9;
+        }
+
+        #controls {
+            margin-top: 5vh;
+            display: flex;
+            justify-content: space-around;
+        }
+
+        .control-button {
+            width: 40px;
+            height: 40px;
+            background-color: #3498db;
+            color: #fff;
+            font-size: 18px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Snaek</h1>
+    <div id="game-board"></div>
+    <div id="controls">
+        <button class="control-button" ontouchstart="changeDirection('up')">↑</button>
+        <button class="control-button" ontouchstart="changeDirection('left')">←</button>
+        <button class="control-button" ontouchstart="changeDirection('down')">↓</button>
+        <button class="control-button" ontouchstart="changeDirection('right')">→</button>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const board = document.getElementById("game-board");
+            const boardSize = 20;
+            let snake = [{ x: 10, y: 10 }];
+            let direction = "right";
+            let food = createFood();
+            let powerUp = null;
+            let isPowerUpActive = false;
+
+            function createBoard() {
+                for (let i = 0; i < boardSize * boardSize; i++) {
+                    const cell = document.createElement("div");
+                    cell.classList.add("cell");
+                    board.appendChild(cell);
+                }
+            }
+
+            function drawSnake() {
+                const cells = document.querySelectorAll(".cell");
+                cells.forEach(cell => cell.classList.remove("snake-body"));
+
+                snake.forEach(segment => {
+                    const index = segment.x + segment.y * boardSize;
+                    cells[index].classList.add("snake-body");
+                });
+
+                const headIndex = snake[0].x + snake[0].y * boardSize;
+                cells[headIndex].classList.add("snake-head");
+            }
+
+            function drawFood() {
+                const cells = document.querySelectorAll(".cell");
+                const foodIndex = food.x + food.y * boardSize;
+                cells[foodIndex].classList.add("food");
+            }
+
+            function drawPowerUp() {
+                if (isPowerUpActive) {
+                    const cells = document.querySelectorAll(".cell");
+                    const powerUpIndex = powerUp.x + powerUp.y * boardSize;
+                    cells[powerUpIndex].classList.add("power-up");
+                }
+            }
+
+            function createFood() {
+                const x = Math.floor(Math.random() * boardSize);
+                const y = Math.floor(Math.random() * boardSize);
+                return { x, y };
+            }
+
+            function createPowerUp() {
+                const x = Math.floor(Math.random() * boardSize);
+                const y = Math.floor(Math.random() * boardSize);
+                return { x, y };
+            }
+
+            function activatePowerUp() {
+                isPowerUpActive = true;
+                powerUp = createPowerUp();
+                setTimeout(() => {
+                    isPowerUpActive = false;
+                    powerUp = null;
+                }, 5000); // Power-up active for 5 seconds
+            }
+
+            function moveSnake() {
+                const head = { ...snake[0] };
+
+                switch (direction) {
+                    case "up":
+                        head.y = (head.y - 1 + boardSize) % boardSize;
+                        break;
+                    case "down":
+                        head.y = (head.y + 1) % boardSize;
+                        break;
+                    case "left":
+                        head.x = (head.x - 1 + boardSize) % boardSize;
+                        break;
+                    case "right":
+                        head.x = (head.x + 1) % boardSize;
+                        break;
+                }
+
+                snake.unshift(head);
+
+                if (head.x === food.x && head.y === food.y) {
+                    if (isPowerUpActive) {
+                        // Grow the snake twice if power-up is active
+                        snake.unshift({ ...head });
+                    }
+                    snake.unshift({ ...head });
+                    food = createFood();
+                }
+
+                if (isPowerUpActive && head.x === powerUp.x && head.y === powerUp.y) {
+                    // Consume power-up
+                    snake.unshift({ ...head });
+                    isPowerUpActive = false;
+                    powerUp = null;
+                } else if (!isPowerUpActive) {
+                    snake.pop();
+                }
+            }
+
+            function checkCollision() {
+                const head = snake[0];
+                const isColliding = snake.slice(1).some(segment => segment.x === head.x && segment.y === head.y);
+                return isColliding;
+            }
+
+            function gameLoop() {
+                moveSnake();
+                if (checkCollision()) {
+                    alert("Game Over!");
+                    resetGame();
+                }
+
+                drawSnake();
+                drawFood();
+                drawPowerUp();
+            }
+
+            function resetGame() {
+                snake = [{ x: 10, y: 10 }];
+                direction = "right";
+                food = createFood();
+                isPowerUpActive = false;
+                powerUp = null;
+            }
+
+            function changeDirection(newDirection) {
+                // Prevent opposite direction changes
+                if (
+                    (newDirection === "up" && direction !== "down") ||
+                    (newDirection === "down" && direction !== "up") ||
+                    (newDirection === "left" && direction !== "right") ||
+                    (newDirection === "right" && direction !== "left")
+                ) {
+                    direction = newDirection;
+                }
+            }
+
+            createBoard();
+            setInterval(gameLoop, 100);
+            setInterval(activatePowerUp, 10000); // Activate a new power-up every 10 seconds
+        });
+    </script>
+</body>
+</html>
+
